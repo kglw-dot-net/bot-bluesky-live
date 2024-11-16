@@ -1,0 +1,16 @@
+{
+  "name": "bot-bluesky-live",
+  "version": "0.1.0-alpha",
+  "description": "WIP — post a message on Bluesky whenever King Gizzard starts a new song",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Bluesky",
+    "King",
+    "Gizzard"
+  ],
+  "author": "Axe <alxndr+npm-kglw-bot-bluesky@gmail.com>",
+  "license": "ISC"
+}
