@@ -1,0 +1,11 @@
+# sensitive data
+.env
+
+# build result
+/dist/
+
+# macOS detritus
+.DS_Store
+
+# NodeJS detritus
+node_modules/
