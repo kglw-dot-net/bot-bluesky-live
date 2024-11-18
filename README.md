@@ -1,10 +1,10 @@
 # [bot-bluesky-live](https://bsky.app/profile/gizz-live.bsky.social)
 
-⚠️ 🚧 🪚 **Work In Progress** 🦺 🛠️ 🗜️
-
 A [Bluesky] bot — whenever King Gizzard plays a song on stage, this bot will post the song name!
 
-Brought to you by the [KGLW.net] Tech & Live-Coverage Teams
+Runs on AWS Lambda.
+
+Brought to you by the [KGLW.net] Tech & Live-Coverage Teams!
 
 
 ## TODO
