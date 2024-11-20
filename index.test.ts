@@ -1,14 +1,32 @@
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 import createFetchMock from 'vitest-fetch-mock'
+import {login} from './bluesky'
 import {
   handlePayload,
   isSongfishPayload,
-  loginBluesky,
   type SongfishWebhookPayload,
 } from './index'
 
+console.log('...tryna mock login().....')
+vi.mock('./bluesky', async (importOriginal) => ({
+  ...(await importOriginal()),
+  login: function mockedLoginBluesky() {
+    console.log('!! mocked loginBluesky implementation......')
+    throw new Error('mock: loginBluesky failure')
+  },
+}
+                                               ));
+
 const fetchMocker = createFetchMock(vi)
 fetchMocker.enableMocks()
+console.log('mocks: fetch mock enabled')
+// function mockJson(urlMatcher, jsonPayload) {
+//   console.log('mocks: fetch mock if', urlMatcher)
+//   fetchMocker.mockIf(urlMatcher, () => ({
+//     body: JSON.stringify(jsonPayload),
+//     contentType: 'application/json',
+//   }))
+// }
 
 describe('isSongfishPayload', () => {
   test('is a function', () => {
@@ -40,11 +58,11 @@ describe('handlePayload', () => {
       await expect(() => handlePayload({body: '{foo'})).rejects.toThrow(/JSON/)
     })
   })
-  describe.skip('with valid payload', () => {
+  describe('with valid payload', () => {
     let payload
     beforeEach(() => {
       const data = {
-        show_id: 'quxxxx'
+        show_id: 123
       }
       payload = {
         body: JSON.stringify(data)
@@ -52,52 +70,38 @@ describe('handlePayload', () => {
     })
     describe('with invalid login', () => {
       beforeEach(() => {
-        vi.mock('./index', async (importOriginal) => {
-          const originalImplementation = await importOriginal()
-          console.log('tryna mock the index import...', originalImplementation)
-          return {
-            ...originalImplementation,
-            loginBluesky: function mockedLoginBluesky() {
-              console.log('mocked loginBluesky implementation......')
-              throw new Error('mock: loginBluesky failure')
-            },
-          }
-        });
-      })
-      test.skip('(SKIPPED: old implementation) resolves with a message', async () => {
-        await expect(handlePayload(payload)).resolves.toMatch(/foooooo/)
+        // TODO
       })
       test('throws', async () => {
-        await expect(() => handlePayload(payload)).rejects.toThrow()
+        console.log('okay now here comes the expect()...')
+        await expect(() => handlePayload(payload)).rejects.toThrow('mock: loginBluesky failure')
       })
     })
-    describe('with valid login', () => {
+    describe.todo('with valid login', () => {
       beforeEach(() => {
-        vi.mock('loginBluesky', {
-          getAuthorFeed: 'foo' //vi.fn({authorFeedData:'this is mocked author feed data'})
-        })
+        // TODO
       })
-      describe(`with invalid payload`, () => {
+      describe.skip(`with malformed Latest.json`, () => {
         beforeEach(() => {
-          fetchMocker.mockIf(/\bkglw\.net\b.+\blatest\.json$/, () => 'mocked Songfish payload is malformed')
+          fetchMocker.mockIf(/\bkglw\.net\b.+\blatest\.json$/, () => 'this mocked Songfish response is malformed JSON')
         })
         test('returns a helpful message', async () => {
-          await expect(handlePayload({body:JSON.stringify({show_id:123})})).resolves.toBe(
+          await expect(handlePayload(payload)).resolves.toBe(
             'payload show_id does not match latest show'
           )
         })
       })
       describe(`when payload's show_id does _not_ match fetched JSON's data[0].show_id`, () => {
         beforeEach(() => {
-          fetchMocker.mockIf(/\bkglw\.net\b.+\blatest\.json$/, () => ({data: [
-            {show_id: 666, songname: 'Most Recent Song Name'},
-            {foo: 'bar'},
-            {foo: 'baz'},
-            {foo: 'qux'},
-          ]}))
+          // mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
+          //   {show_id: 666, songname: 'Most Recent Song Name'},
+          //   {foo: 'bar'},
+          //   {foo: 'baz'},
+          //   {foo: 'qux'},
+          // ]})
         })
         test('returns a helpful message', async () => {
-          await expect(handlePayload({body:JSON.stringify({show_id:123})})).resolves.toBe(
+          await expect(handlePayload(payload)).resolves.toBe(
             'payload show_id does not match latest show'
           )
         })
@@ -112,11 +116,12 @@ describe('handlePayload', () => {
           ]}))
         })
         test('does something useful', async () => {
-          await expect(handlePayload({body:JSON.stringify({show_id:123})})).resolves.toBe(
+          await expect(handlePayload(payload)).resolves.toBe(
             'whattttt'
           )
         })
       })
     })
   })
+  describe.todo('with fixture payload')
 })

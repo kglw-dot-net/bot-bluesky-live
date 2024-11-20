@@ -1,22 +1,12 @@
 import {BskyAgent} from '@atproto/api'
 import * as dotenv from 'dotenv'
 import * as process from 'process'
+import {login} from './bluesky'
 
 dotenv.config() // read env var declarations from a `.env` file
 
-type SongfishWebhookPayload = {
+export type SongfishWebhookPayload = {
   body:{show_id:number}
-}
-
-export async function loginBluesky():Promise<BskyAgent> {
-  const agent = new BskyAgent({
-    service: 'https://bsky.social',
-  })
-  await agent.login({
-    identifier: process.env.BLUESKY_USERNAME!,
-    password: process.env.BLUESKY_PASSWORD!,
-  })
-  return agent
 }
 
 export function isSongfishPayload(event:any):event is SongfishWebhookPayload {
@@ -33,10 +23,10 @@ export async function handlePayload(event:SongfishWebhookPayload):Promise<string
     throw err
   }
   let bsky
-  console.log('about to call loginBluesky...', loginBluesky)
+  console.log('about to call login...', login)
   try {
-    bsky = await loginBluesky()
-    // console.log('logged in successfully!')
+    bsky = await login()
+    console.log('logged in successfully!')
   } catch (err) {
     console.log('login error', err)
     throw err
