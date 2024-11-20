@@ -12,8 +12,6 @@ jobs:
         with:
           node-version: 20.18.1 # match .tool-versions file
       - name: install
-        steps:
-          - run: npm ci
+        run: npm ci
       - name: tests
-        steps:
-          - run: npm run test
+        run: npm run test
