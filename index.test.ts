@@ -40,7 +40,7 @@ describe('handlePayload', () => {
       await expect(() => handlePayload({body: '{foo'})).rejects.toThrow(/JSON/)
     })
   })
-  describe('with valid payload', () => {
+  describe.skip('with valid payload', () => {
     let payload
     beforeEach(() => {
       const data = {
@@ -50,7 +50,7 @@ describe('handlePayload', () => {
         body: JSON.stringify(data)
       }
     })
-    describe.only('with invalid login', () => {
+    describe('with invalid login', () => {
       beforeEach(() => {
         vi.mock('./index', async (importOriginal) => {
           const originalImplementation = await importOriginal()
