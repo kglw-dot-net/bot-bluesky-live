@@ -8,7 +8,7 @@ type SongfishWebhookPayload = {
   body:{show_id:number}
 }
 
-async function loginBluesky():Promise<BskyAgent> {
+export async function loginBluesky():Promise<BskyAgent> {
   const agent = new BskyAgent({
     service: 'https://bsky.social',
   })
@@ -19,23 +19,24 @@ async function loginBluesky():Promise<BskyAgent> {
   return agent
 }
 
-function isSongfishPayload(event:any):event is SongfishWebhookPayload {
-  // note that testing this via commandline will mean that the event is a string payload, whereas on Lambda it is a true object
+export function isSongfishPayload(event:any):event is SongfishWebhookPayload {
   return typeof event?.body === 'string' && event.body.includes('"show_id"')
+  // TODO could further verify that the song_id appears to be an int...
 }
 
-async function handlePayload(event:SongfishWebhookPayload):Promise<string> {
+export async function handlePayload(event:SongfishWebhookPayload):Promise<string> {
   let payloadBody
   try {
     payloadBody = JSON.parse(event.body)
   } catch (err) {
-    console.log('error parsing event body', err)
+    // console.log('error parsing event body', err)
     throw err
   }
   let bsky
+  console.log('about to call loginBluesky...', loginBluesky)
   try {
     bsky = await loginBluesky()
-    console.log('logged in successfully!')
+    // console.log('logged in successfully!')
   } catch (err) {
     console.log('login error', err)
     throw err

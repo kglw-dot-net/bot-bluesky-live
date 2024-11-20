@@ -8,7 +8,8 @@
     "build": "funpack",
     "postbuild": "echo okay now copy the index.js file, but not the package.json, and put it up into Lambda",
     "prebuild": "echo Building...",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest --run",
+    "test:watch": "vitest --watch"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -35,7 +36,9 @@
     "esbuild": "^0.24.0",
     "funpack": "^1.3.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5",
+    "vitest-fetch-mock": "^0.4.2"
   },
   "funpack": {
     "settings": {},
