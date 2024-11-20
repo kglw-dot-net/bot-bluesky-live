@@ -10,7 +10,7 @@ jobs:
       - name: setup node v20
         uses: actions/setup-node@v4
         with:
-          node-version: 20.18.1 # match .tool-versions file
+          node-version: 20.18.0 # match .tool-versions file
       - name: install
         run: npm ci
       - name: tests
