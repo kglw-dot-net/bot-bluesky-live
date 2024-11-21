@@ -7,7 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-### Added
+* ...
+
+
+## [v1.0.1]
 
 * test suite (addresses #1)
 * this CHANGELOG file 🤘
@@ -20,5 +23,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 * basic functionality
 
 
-[Unreleased]: https://github.com/kglw-dot-net/bot-bluesky-live/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/kglw-dot-net/bot-bluesky-live/compare/v1.0.1...HEAD
+[v1.0.1]: https://github.com/kglw-dot-net/bot-bluesky-live/releases/tag/v1.0.1
 [v1.0.0]: https://github.com/kglw-dot-net/bot-bluesky-live/releases/tag/v1.0.0
