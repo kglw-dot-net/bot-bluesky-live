@@ -1,9 +1,9 @@
 name: test suite
 on: [push]
-image: ubuntu-latest
 jobs:
 
   lint:
+    runs-on: ubuntu-latest
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -17,6 +17,7 @@ jobs:
         run: npm run lint
 
   test:
+    runs-on: ubuntu-latest
     steps:
       - name: checkout
         uses: actions/checkout@v4
