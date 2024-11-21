@@ -6,6 +6,7 @@ import {
   isSongfishPayload,
   type SongfishWebhookPayload,
 } from './index'
+import testFixture from './test-fixture.json'
 
 vi.mock('./bluesky') // use e.g.: vi.mocked(login).mockResolvedValue({})
 
@@ -68,7 +69,7 @@ describe('handlePayload', () => {
       })
     })
     describe('with valid login and prior post does not match latest song title', () => {
-      let mockedLoginReturnValue = {
+      const mockedLoginReturnValue = {
         getAuthorFeed: vi.fn().mockReturnValueOnce({data: {feed: [{post: {record: {text: 'Prior Post'}}}] }}),
       }
       beforeEach(() => {
@@ -125,5 +126,33 @@ describe('handlePayload', () => {
       })
     })
   })
-  describe.todo('with fixture payload')
+  describe('with fixture payload matching latest show_id', () => {
+    const testWithFixture = test.extend({
+      event: async ({}, use) => {
+        await use(testFixture.event)
+      }
+    })
+    const mockedLoginReturnValue = {
+      getAuthorFeed: vi.fn().mockReturnValueOnce({data: {feed: [{post: {record: {text: 'Prior Post'}}}] }}),
+    }
+    let mockedPost
+    beforeEach(() => {
+      mockedPost = vi.fn().mockReturnValueOnce({mocked: true})
+      vi.mocked(login).mockResolvedValue({
+        ...mockedLoginReturnValue,
+        post: mockedPost,
+      })
+      mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
+        // the id 1699404057 is defined in the fixture file
+        {show_id: 1699404057, songname: 'Name of Song From Show #1699404057'},
+      ]})
+    })
+    afterEach(() => {
+      vi.mocked(login).mockReset()
+    })
+    testWithFixture('does not throw', async ({event}) => {
+      await expect(handlePayload(event)).resolves.not.to.throw()
+      expect(mockedPost).toHaveBeenCalledWith({text: 'Name of Song From Show #1699404057'})
+    })
+  })
 })
