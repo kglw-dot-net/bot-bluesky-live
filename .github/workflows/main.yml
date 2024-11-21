@@ -1,0 +1,31 @@
+name: test suite
+on: [push]
+jobs:
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: setup node v20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.0 # match .tool-versions file
+      - name: install
+        run: npm ci
+      - name: tests
+        run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: setup node v20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.0 # match .tool-versions file
+      - name: install
+        run: npm ci
+      - name: tests
+        run: npm run test

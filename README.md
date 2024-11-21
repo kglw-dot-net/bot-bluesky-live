@@ -18,7 +18,8 @@ Brought to you by the [KGLW.net] Tech & Live-Coverage Teams!
 
 ## Docs
 
-* [NPM package: `@proto/api`](https://github.com/bluesky-social/atproto/blob/main/packages/api/README.md)
+* Bluesky agent API: [`@proto/api` NPM package](https://github.com/bluesky-social/atproto/blob/main/packages/api/README.md)
+* test suite: [Vitest](https://vitest.dev/api/vi.html)
 
 
 ## Ops

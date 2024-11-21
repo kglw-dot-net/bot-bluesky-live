@@ -1,0 +1,40 @@
+{
+  "event": {
+    "version": "2.0",
+    "routeKey": "$default",
+    "rawPath": "/",
+    "rawQueryString": "",
+    "headers": {
+      "x-amzn-tls-cipher-suite": "TLS_AES_128_GCM_SHA256",
+      "content-length": "22",
+      "x-amzn-tls-version": "TLSv1.3",
+      "x-amzn-trace-id": "Root=1-673ab04e-002e78a15109e2ae29abb650",
+      "x-forwarded-proto": "https",
+      "host": "lambda-domain-prefix-identifier.lambda-url.us-west-1.on.aws",
+      "x-forwarded-port": "443",
+      "content-type": "application/json",
+      "x-forwarded-for": "149.28.253.24",
+      "accept": "*/*"
+    },
+    "requestContext": {
+      "accountId": "anonymous",
+      "apiId": "lambda-domain-prefix-identifier",
+      "domainName": "lambda-domain-prefix-identifier.lambda-url.us-west-1.on.aws",
+      "domainPrefix": "lambda-domain-prefix-identifier",
+      "http": {
+        "method": "POST",
+        "path": "/",
+        "protocol": "HTTP/1.1",
+        "sourceIp": "149.28.253.24",
+        "userAgent": null
+      },
+      "requestId": "36366359-454e-4f2a-87cf-53e666d930fe",
+      "routeKey": "$default",
+      "stage": "$default",
+      "time": "18/Nov/2024:03:11:10 +0000",
+      "timeEpoch": 1731899470068
+    },
+    "body": "{\"show_id\":1699404057}",
+    "isBase64Encoded": false
+  }
+}
