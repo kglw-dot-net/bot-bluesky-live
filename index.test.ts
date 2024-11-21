@@ -107,7 +107,7 @@ describe('handlePayload', () => {
       describe(`when payload's show_id matches fetched JSON's data[-1].show_id`, () => {
         let mockedPost
         beforeEach(() => {
-          mockedPost = vi.fn()
+          mockedPost = vi.fn().mockReturnValueOnce({mocked: true})
           vi.mocked(login).mockResolvedValue({
             ...mockedLoginReturnValue,
             post: mockedPost,
