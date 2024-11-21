@@ -125,6 +125,34 @@ describe('handlePayload', () => {
         })
       })
     })
+    describe('with valid login and prior post _does_ match latest song title', () => {
+      const mockedLoginReturnValue = {
+        getAuthorFeed: vi.fn().mockReturnValueOnce({data: {feed: [{post: {record: {text: 'Song Title'}}}] }}),
+      }
+      beforeEach(() => {
+        vi.mocked(login).mockResolvedValue(mockedLoginReturnValue)
+      })
+      afterEach(() => {
+        vi.mocked(login).mockReset()
+      })
+      describe(`when payload's show_id matches fetched JSON's data[-1].show_id`, () => {
+        let mockedPost
+        beforeEach(() => {
+          mockedPost = vi.fn().mockReturnValueOnce({mocked: true})
+          vi.mocked(login).mockResolvedValue({
+            ...mockedLoginReturnValue,
+            post: mockedPost,
+          })
+          mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
+            {show_id: 123, songname: 'Song Title'},
+          ]})
+        })
+        test('does _not_ post the song title', async () => {
+          await handlePayload(payload)
+          expect(mockedPost).not.toHaveBeenCalled()
+        })
+      })
+    })
   })
   describe('with fixture payload matching latest show_id', () => {
     const testWithFixture = test.extend({
