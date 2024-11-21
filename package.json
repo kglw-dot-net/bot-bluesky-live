@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "funpack",
+    "lint": "tsc",
     "postbuild": "echo okay now copy the index.js file, but not the package.json, and put it up into Lambda",
+    "postlint": "echo Lint succeeded",
     "prebuild": "echo Building...",
     "test": "vitest --run",
     "test:watch": "vitest --watch"
