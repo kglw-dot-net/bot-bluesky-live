@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [v1.0.1]
 
-* test suite (addresses #1)
+* test suite (addresses [issue #1](https://github.com/kglw-dot-net/bot-bluesky-live/issues/1))
 * this CHANGELOG file 🤘
 
 
