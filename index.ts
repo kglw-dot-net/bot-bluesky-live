@@ -50,7 +50,7 @@ export async function handlePayload(event:LambdaEvent<SongfishWebhookPayload>):P
   }
   let lastPost
   try {
-    const feed = await bsky.getAuthorFeed({actor: process.env.BLUESKY_USERNAME})
+    const feed = await bsky.getAuthorFeed({actor: process.env.BLUESKY_USERNAME}) // TODO extract this into bluesky file as well
     lastPost = feed.data.feed[0]
   } catch (err) {
     console.log('error fetching most recent post...', err)

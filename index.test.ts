@@ -26,19 +26,38 @@ describe('isSongfishPayload', () => {
   test('is a function', () => {
     expect(typeof isSongfishPayload).toBe('function')
   })
-  describe('with non-string body', () => {
+  describe('with non-object payload', () => {
     test('is false', () => {
       expect(isSongfishPayload(undefined)).toBe(false)
       expect(isSongfishPayload(9)).toBe(false)
       expect(isSongfishPayload('foo')).toBe(false)
     })
   })
-  describe('with an event object containing "body" property with value of a stringified JSON object', () => {
-    const fakeSongfishPayload:LambdaEvent<SongfishWebhookPayload> = {
-      body: JSON.stringify({show_id: 'foo'})
-    }
-    test('retuns true', () => {
-      expect(isSongfishPayload(fakeSongfishPayload)).toBe(true)
+  describe('with object payload', () => {
+    describe('when object does not have `body`', () => {
+      test('is false', () => {
+        expect(isSongfishPayload({foo:'bar'})).toBe(false)
+      })
+    })
+    describe('when object does have `body`', () => {
+      describe('but it is not stringified JSON', () => {
+        test('is false', () => {
+          expect(isSongfishPayload({body:[]})).toBe(false)
+        })
+      })
+      describe('set to stringified JSON', () => {
+        describe('when stringified JSON is _not_ an object with a `show_id` key', () => {
+          test('is false', () => {
+            expect(isSongfishPayload({body:'[1, 2, 3]'})).toBe(false)
+            expect(isSongfishPayload({body:'{}'})).toBe(false)
+          })
+        })
+        describe('when stringified JSON _is_ an object with a `show_id` key', () => {
+          test('is true', () => {
+            expect(isSongfishPayload({body:'{"show_id": 999}'})).toBe(true)
+          })
+        })
+      })
     })
   })
 })
@@ -48,7 +67,7 @@ describe('handlePayload', () => {
     expect(typeof handlePayload).toBe('function')
   })
   describe('with malformed payload', () => {
-    test('throws', async () => {
+    test('throws with the error message from parsing the payload', async () => {
       // @ts-expect-error test passing invalid string argument
       await expect(() => handlePayload([])).rejects.toThrow('not valid JSON')
     })
@@ -65,10 +84,10 @@ describe('handlePayload', () => {
     })
     describe('with invalid login', () => {
       beforeEach(() => {
-        vi.mocked(login).mockRejectedValue('mocked bluesky.login()')
+        vi.mocked(login).mockRejectedValue('mocked login failure')
       })
-      test('throws', async () => {
-        await expect(() => handlePayload(payload)).rejects.toThrow('mocked bluesky.login()')
+      test('throws with the error message from logging in', async () => {
+        await expect(() => handlePayload(payload)).rejects.toThrow('mocked login failure')
       })
     })
     describe('with valid login and prior post does not match latest song title', () => {
