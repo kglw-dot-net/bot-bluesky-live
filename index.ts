@@ -5,8 +5,15 @@ import {login} from './bluesky'
 
 dotenv.config() // read env var declarations from a `.env` file
 
-export type SongfishWebhookPayload = {
-  body:{show_id:number}
+export type SongfishWebhookPayload = { // TODO split this up into LambdaEvent and WebhookPayload
+  body: {
+    show_id: number
+  }
+}
+
+export type BlueskyAgent = {
+  getAuthorFeed: Function
+  post: Function
 }
 
 export function isSongfishPayload(event:any):event is SongfishWebhookPayload {
@@ -19,14 +26,12 @@ export async function handlePayload(event:SongfishWebhookPayload):Promise<string
   try {
     payloadBody = JSON.parse(event.body)
   } catch (err) {
-    // console.log('error parsing event body', err)
+    console.log('error parsing event body', err)
     throw err
   }
-  let bsky
-  console.log('about to call login...', login)
+  let bsky:BlueskyAgent
   try {
     bsky = await login()
-    console.log('logged in successfully!')
   } catch (err) {
     console.log('login error', err)
     throw err
@@ -39,7 +44,6 @@ export async function handlePayload(event:SongfishWebhookPayload):Promise<string
     throw err
   }
   const lastSongInLatestShow = latestData.slice(-1)[0]
-  console.log(JSON.stringify({payloadBody, lastSongInLatestShow}))
   if (payloadBody.show_id !== lastSongInLatestShow.show_id) {
     console.log(`payload show_id ${payloadBody.show_id} does not match latest show ${lastSongInLatestShow.show_id}`)
     return 'payload show_id does not match latest show'
@@ -57,20 +61,17 @@ export async function handlePayload(event:SongfishWebhookPayload):Promise<string
     return 'most recent post is already about this song...'
   }
   const text = lastSongInLatestShow.songname
-  console.log('tryna post...', text)
   const postResponse = await bsky.post({text})
   console.log('Just posted!', postResponse)
   return postResponse
 }
 
 export const handler = async (event:SongfishWebhookPayload|unknown):Promise<{statusCode:number,body:string}> => {
-  console.log('handler!!', event)
   if (!isSongfishPayload(event))
     return {
       statusCode: 400,
       body: `unexpected payload... typeof event: ${typeof event}`,
     }
-  console.log('tryna handle it...')
   try {
     return {
       statusCode: 200,

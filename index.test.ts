@@ -7,26 +7,17 @@ import {
   type SongfishWebhookPayload,
 } from './index'
 
-console.log('...tryna mock login().....')
-vi.mock('./bluesky', async (importOriginal) => ({
-  ...(await importOriginal()),
-  login: function mockedLoginBluesky() {
-    console.log('!! mocked loginBluesky implementation......')
-    throw new Error('mock: loginBluesky failure')
-  },
-}
-                                               ));
+vi.mock('./bluesky') // use e.g.: vi.mocked(login).mockResolvedValue({})
 
 const fetchMocker = createFetchMock(vi)
 fetchMocker.enableMocks()
-console.log('mocks: fetch mock enabled')
-// function mockJson(urlMatcher, jsonPayload) {
-//   console.log('mocks: fetch mock if', urlMatcher)
-//   fetchMocker.mockIf(urlMatcher, () => ({
-//     body: JSON.stringify(jsonPayload),
-//     contentType: 'application/json',
-//   }))
-// }
+
+function mockJson(urlMatcher, jsonPayload) {
+  fetchMocker.mockIf(urlMatcher, () => ({
+    body: JSON.stringify(jsonPayload),
+    contentType: 'application/json',
+  }))
+}
 
 describe('isSongfishPayload', () => {
   test('is a function', () => {
@@ -55,7 +46,7 @@ describe('handlePayload', () => {
   })
   describe('with malformed payload', () => {
     test('throws', async () => {
-      await expect(() => handlePayload({body: '{foo'})).rejects.toThrow(/JSON/)
+      await expect(() => handlePayload([])).rejects.toThrow('not valid JSON')
     })
   })
   describe('with valid payload', () => {
@@ -70,55 +61,66 @@ describe('handlePayload', () => {
     })
     describe('with invalid login', () => {
       beforeEach(() => {
-        // TODO
+        vi.mocked(login).mockRejectedValue('mocked bluesky.login()')
       })
       test('throws', async () => {
-        console.log('okay now here comes the expect()...')
-        await expect(() => handlePayload(payload)).rejects.toThrow('mock: loginBluesky failure')
+        await expect(() => handlePayload(payload)).rejects.toThrow('mocked bluesky.login()')
       })
     })
-    describe.todo('with valid login', () => {
+    describe('with valid login and prior post does not match latest song title', () => {
+      let mockedLoginReturnValue = {
+        getAuthorFeed: vi.fn().mockReturnValueOnce({data: {feed: [{post: {record: {text: 'Prior Post'}}}] }}),
+      }
       beforeEach(() => {
-        // TODO
+        vi.mocked(login).mockResolvedValue(mockedLoginReturnValue)
       })
-      describe.skip(`with malformed Latest.json`, () => {
+      afterEach(() => {
+        vi.mocked(login).mockReset()
+      })
+      describe(`with malformed Latest.json`, () => {
         beforeEach(() => {
           fetchMocker.mockIf(/\bkglw\.net\b.+\blatest\.json$/, () => 'this mocked Songfish response is malformed JSON')
         })
         test('returns a helpful message', async () => {
-          await expect(handlePayload(payload)).resolves.toBe(
-            'payload show_id does not match latest show'
-          )
+          await expect(handlePayload(payload)).rejects.toThrow('not valid JSON')
         })
       })
-      describe(`when payload's show_id does _not_ match fetched JSON's data[0].show_id`, () => {
+      describe(`when payload's show_id does _not_ match fetched JSON's data[-1].show_id`, () => {
+        let mockedPost
         beforeEach(() => {
-          // mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
-          //   {show_id: 666, songname: 'Most Recent Song Name'},
-          //   {foo: 'bar'},
-          //   {foo: 'baz'},
-          //   {foo: 'qux'},
-          // ]})
+          mockedPost = vi.fn()
+          vi.mocked(login).mockResolvedValue({
+            ...mockedLoginReturnValue,
+            post: mockedPost,
+          })
+          mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
+            {show_id: 666, songname: 'Most Recent Song Name'},
+          ]})
         })
         test('returns a helpful message', async () => {
           await expect(handlePayload(payload)).resolves.toBe(
             'payload show_id does not match latest show'
           )
+          expect(mockedPost).not.toHaveBeenCalled()
         })
       })
-      describe(`when payload's show_id matches fetched JSON's data[0].show_id`, () => {
+      describe(`when payload's show_id matches fetched JSON's data[-1].show_id`, () => {
+        let mockedPost
         beforeEach(() => {
-          fetchMocker.mockIf(/kglw/, () => ({data: [
+          mockedPost = vi.fn()
+          vi.mocked(login).mockResolvedValue({
+            ...mockedLoginReturnValue,
+            post: mockedPost,
+          })
+          mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
+            {show_id: 789, songname: 'A Different Show and Song'},
+            {show_id: 456, songname: 'Yet Another Different Show and Song'},
             {show_id: 123, songname: 'Most Recent Song Name'},
-            {foo: 'bar'},
-            {foo: 'baz'},
-            {foo: 'qux'},
-          ]}))
+          ]})
         })
-        test('does something useful', async () => {
-          await expect(handlePayload(payload)).resolves.toBe(
-            'whattttt'
-          )
+        test('posts the song title', async () => {
+          await handlePayload(payload)
+          expect(mockedPost).toHaveBeenCalledWith({text: 'Most Recent Song Name'})
         })
       })
     })

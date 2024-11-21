@@ -1,7 +1,6 @@
 import * as process from 'process'
 
 export async function login():Promise<BskyAgent> {
-  console.log('... this is THE REAL login ...')
   const agent = new BskyAgent({
     service: 'https://bsky.social',
   })
