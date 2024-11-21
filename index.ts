@@ -1,14 +1,14 @@
-import {BskyAgent} from '@atproto/api'
 import * as dotenv from 'dotenv'
 import * as process from 'process'
-import {login} from './bluesky'
+import {login} from './bluesky.js'
 
 dotenv.config() // read env var declarations from a `.env` file
 
-export type SongfishWebhookPayload = { // TODO split this up into LambdaEvent and WebhookPayload
-  body: {
-    show_id: number
-  }
+export type LambdaEvent<T> = {
+  body: string // ... which is JSON that parses into a type T
+}
+export type SongfishWebhookPayload = {
+  show_id: number
 }
 
 export type BlueskyAgent = {
@@ -16,13 +16,13 @@ export type BlueskyAgent = {
   post: Function
 }
 
-export function isSongfishPayload(event:any):event is SongfishWebhookPayload {
+export function isSongfishPayload(event:any):event is LambdaEvent<SongfishWebhookPayload> {
   return typeof event?.body === 'string' && event.body.includes('"show_id"')
   // TODO could further verify that the song_id appears to be an int...
 }
 
-export async function handlePayload(event:SongfishWebhookPayload):Promise<string> {
-  let payloadBody
+export async function handlePayload(event:LambdaEvent<SongfishWebhookPayload>):Promise<string> {
+  let payloadBody:SongfishWebhookPayload
   try {
     payloadBody = JSON.parse(event.body)
   } catch (err) {

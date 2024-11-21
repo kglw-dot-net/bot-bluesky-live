@@ -1,14 +1,16 @@
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 import createFetchMock from 'vitest-fetch-mock'
-import {login} from './bluesky'
+import {BskyAgent} from '@atproto/api'
+import {login} from './bluesky.js'
 import {
   handlePayload,
   isSongfishPayload,
+  type LambdaEvent,
   type SongfishWebhookPayload,
-} from './index'
+} from './index.js'
 import testFixture from './test-fixture.json'
 
-vi.mock('./bluesky') // use e.g.: vi.mocked(login).mockResolvedValue({})
+vi.mock('./bluesky.js') // use e.g.: vi.mocked(login).mockResolvedValue({})
 
 const fetchMocker = createFetchMock(vi)
 fetchMocker.enableMocks()
@@ -26,13 +28,13 @@ describe('isSongfishPayload', () => {
   })
   describe('with non-string body', () => {
     test('is false', () => {
-      expect(isSongfishPayload()).toBe(false)
+      expect(isSongfishPayload(undefined)).toBe(false)
       expect(isSongfishPayload(9)).toBe(false)
       expect(isSongfishPayload('foo')).toBe(false)
     })
   })
   describe('with an event object containing "body" property with value of a stringified JSON object', () => {
-    const fakeSongfishPayload:SongfishWebhookPayload = {
+    const fakeSongfishPayload:LambdaEvent<SongfishWebhookPayload> = {
       body: JSON.stringify({show_id: 'foo'})
     }
     test('retuns true', () => {
@@ -47,6 +49,7 @@ describe('handlePayload', () => {
   })
   describe('with malformed payload', () => {
     test('throws', async () => {
+      // @ts-expect-error test passing invalid string argument
       await expect(() => handlePayload([])).rejects.toThrow('not valid JSON')
     })
   })
@@ -73,7 +76,7 @@ describe('handlePayload', () => {
         getAuthorFeed: vi.fn().mockReturnValueOnce({data: {feed: [{post: {record: {text: 'Prior Post'}}}] }}),
       }
       beforeEach(() => {
-        vi.mocked(login).mockResolvedValue(mockedLoginReturnValue)
+        vi.mocked(login).mockResolvedValue(mockedLoginReturnValue as unknown as BskyAgent)
       })
       afterEach(() => {
         vi.mocked(login).mockReset()
@@ -93,7 +96,7 @@ describe('handlePayload', () => {
           vi.mocked(login).mockResolvedValue({
             ...mockedLoginReturnValue,
             post: mockedPost,
-          })
+          } as unknown as BskyAgent)
           mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
             {show_id: 666, songname: 'Most Recent Song Name'},
           ]})
@@ -112,7 +115,7 @@ describe('handlePayload', () => {
           vi.mocked(login).mockResolvedValue({
             ...mockedLoginReturnValue,
             post: mockedPost,
-          })
+          } as unknown as BskyAgent)
           mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
             {show_id: 789, songname: 'A Different Show and Song'},
             {show_id: 456, songname: 'Yet Another Different Show and Song'},
@@ -130,7 +133,7 @@ describe('handlePayload', () => {
         getAuthorFeed: vi.fn().mockReturnValueOnce({data: {feed: [{post: {record: {text: 'Song Title'}}}] }}),
       }
       beforeEach(() => {
-        vi.mocked(login).mockResolvedValue(mockedLoginReturnValue)
+        vi.mocked(login).mockResolvedValue(mockedLoginReturnValue as unknown as BskyAgent)
       })
       afterEach(() => {
         vi.mocked(login).mockReset()
@@ -142,7 +145,7 @@ describe('handlePayload', () => {
           vi.mocked(login).mockResolvedValue({
             ...mockedLoginReturnValue,
             post: mockedPost,
-          })
+          } as unknown as BskyAgent)
           mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
             {show_id: 123, songname: 'Song Title'},
           ]})
@@ -169,7 +172,7 @@ describe('handlePayload', () => {
       vi.mocked(login).mockResolvedValue({
         ...mockedLoginReturnValue,
         post: mockedPost,
-      })
+      } as unknown as BskyAgent)
       mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
         // the id 1699404057 is defined in the fixture file
         {show_id: 1699404057, songname: 'Name of Song From Show #1699404057'},
@@ -178,8 +181,8 @@ describe('handlePayload', () => {
     afterEach(() => {
       vi.mocked(login).mockReset()
     })
-    testWithFixture('does not throw', async ({event}) => {
-      await expect(handlePayload(event)).resolves.not.to.throw()
+    testWithFixture('does not throw', async ({event}:{event:LambdaEvent<SongfishWebhookPayload>}) => {
+      await expect(handlePayload(event)).resolves.not.toThrow()
       expect(mockedPost).toHaveBeenCalledWith({text: 'Name of Song From Show #1699404057'})
     })
   })
