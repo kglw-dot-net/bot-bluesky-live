@@ -1,6 +1,6 @@
 {
   "name": "@kglw-dot-net/bot-bluesky-live",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "post a message on Bluesky whenever King Gizzard starts a new song",
   "exports": "./dist/index.mjs",
   "type": "module",
