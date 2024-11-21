@@ -1,4 +1,5 @@
 import * as process from 'process'
+import {BskyAgent} from '@atproto/api'
 
 export async function login():Promise<BskyAgent> {
   const agent = new BskyAgent({
