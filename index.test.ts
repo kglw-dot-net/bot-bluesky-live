@@ -81,7 +81,7 @@ describe('handlePayload', () => {
     let payload
     beforeEach(() => {
       const data = {
-        show_id: 123
+        show_id: 0
       }
       payload = {
         body: JSON.stringify(data)
@@ -108,7 +108,13 @@ describe('handlePayload', () => {
         })
       })
       describe('with well-formed latest.json', () => {
-        // TODO move mockJson call here instead of more-deeply-nested
+        beforeEach(() => {
+          mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
+            {show_id: 789, songname: 'Couple Songs Ago'},
+            {show_id: 456, songname: 'Prior Song Title'},
+            {show_id: 123, songname: 'Newest Song'},
+          ]})
+        })
         describe('when prior post does NOT match latest song title', () => {
           beforeEach(() => {
             vi.mocked(Bluesky.prototype.getMostRecentPost).mockResolvedValue({post: {
@@ -119,9 +125,6 @@ describe('handlePayload', () => {
             let mockRecentPost
             beforeEach(() => {
               mockRecentPost = vi.mocked(Bluesky.prototype.getMostRecentPost).mockResolvedValue({} as any)
-              mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
-                {show_id: 666, songname: 'Most Recent Song Name'},
-              ]})
             })
             afterEach(() => {
               mockRecentPost = null
@@ -136,16 +139,8 @@ describe('handlePayload', () => {
           describe(`when payload's show_id matches fetched JSON's data[-1].show_id`, () => {
             let mockedPost
             beforeEach(() => {
-              vi.mocked(Bluesky.prototype.login).mockResolvedValue()
-              vi.mocked(Bluesky.prototype.getMostRecentPost).mockResolvedValue({post: {
-                record: {text: 'Prior Song Title'}
-              }} as any)
+              payload.body = JSON.stringify({show_id: 123})
               mockedPost = vi.mocked(Bluesky.prototype.createNewPost).mockResolvedValue({} as any)
-              mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
-                {show_id: 789, songname: 'Couple Songs Ago'},
-                {show_id: 456, songname: 'Prior Song Title'},
-                {show_id: 123, songname: 'Newest Song'},
-              ]})
             })
             afterEach(() => {
               mockedPost = null
