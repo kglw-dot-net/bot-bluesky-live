@@ -1,7 +1,8 @@
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 import createFetchMock from 'vitest-fetch-mock'
 import {BskyAgent} from '@atproto/api'
-import {login} from './bluesky.js'
+// import type {PostView} from '@atproto/api/lexicon/types/app/bsky/feed/defs' // TODO arg where is this
+import Bluesky from './bluesky.js'
 import {
   handlePayload,
   isSongfishPayload,
@@ -10,7 +11,11 @@ import {
 } from './index.js'
 import testFixture from './test-fixture.json'
 
-vi.mock('./bluesky.js') // use e.g.: vi.mocked(login).mockResolvedValue({})
+vi.mock('./bluesky.js')
+
+beforeEach(() => {
+  vi.clearAllMocks(); // reset before, not after, each test
+})
 
 const fetchMocker = createFetchMock(vi)
 fetchMocker.enableMocks()
@@ -68,7 +73,7 @@ describe('handlePayload', () => {
   })
   describe('with malformed payload', () => {
     test('throws with the error message from parsing the payload', async () => {
-      // @ts-expect-error test passing invalid string argument
+      // @ts-expect-error test passing invalid argument
       await expect(() => handlePayload([])).rejects.toThrow('not valid JSON')
     })
   })
@@ -76,7 +81,7 @@ describe('handlePayload', () => {
     let payload
     beforeEach(() => {
       const data = {
-        show_id: 123
+        show_id: 0
       }
       payload = {
         body: JSON.stringify(data)
@@ -84,23 +89,17 @@ describe('handlePayload', () => {
     })
     describe('with invalid login', () => {
       beforeEach(() => {
-        vi.mocked(login).mockRejectedValue('mocked login failure')
+        vi.mocked(Bluesky.prototype.login).mockRejectedValue('mocked login failure')
       })
       test('throws with the error message from logging in', async () => {
         await expect(() => handlePayload(payload)).rejects.toThrow('mocked login failure')
       })
     })
-    describe('with valid login and prior post does not match latest song title', () => {
-      const mockedLoginReturnValue = {
-        getAuthorFeed: vi.fn().mockReturnValueOnce({data: {feed: [{post: {record: {text: 'Prior Post'}}}] }}),
-      }
+    describe('with valid login', () => {
       beforeEach(() => {
-        vi.mocked(login).mockResolvedValue(mockedLoginReturnValue as unknown as BskyAgent)
+        vi.mocked(Bluesky.prototype.login).mockResolvedValue()
       })
-      afterEach(() => {
-        vi.mocked(login).mockReset()
-      })
-      describe(`with malformed Latest.json`, () => {
+      describe(`with malformed latest.json`, () => {
         beforeEach(() => {
           fetchMocker.mockIf(/\bkglw\.net\b.+\blatest\.json$/, () => 'this mocked Songfish response is malformed JSON')
         })
@@ -108,70 +107,68 @@ describe('handlePayload', () => {
           await expect(handlePayload(payload)).rejects.toThrow('not valid JSON')
         })
       })
-      describe(`when payload's show_id does _not_ match fetched JSON's data[-1].show_id`, () => {
-        let mockedPost
+      describe('with well-formed latest.json', () => {
         beforeEach(() => {
-          mockedPost = vi.fn()
-          vi.mocked(login).mockResolvedValue({
-            ...mockedLoginReturnValue,
-            post: mockedPost,
-          } as unknown as BskyAgent)
           mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
-            {show_id: 666, songname: 'Most Recent Song Name'},
+            {show_id: 789, songname: 'Couple Songs Ago'},
+            {show_id: 456, songname: 'Prior Song Title'},
+            {show_id: 123, songname: 'Newest Song'},
           ]})
         })
-        test('returns a helpful message', async () => {
-          await expect(handlePayload(payload)).resolves.toBe(
-            'payload show_id does not match latest show'
-          )
-          expect(mockedPost).not.toHaveBeenCalled()
+        describe('when prior post does NOT match latest song title', () => {
+          beforeEach(() => {
+            vi.mocked(Bluesky.prototype.getMostRecentPost).mockResolvedValue({post: {
+              record: {text: 'Prior Post'}
+            } as any})
+          })
+          describe(`when payload's show_id does _not_ match fetched JSON's data[-1].show_id`, () => {
+            let mockRecentPost
+            beforeEach(() => {
+              mockRecentPost = vi.mocked(Bluesky.prototype.getMostRecentPost).mockResolvedValue({} as any)
+            })
+            afterEach(() => {
+              mockRecentPost = null
+            })
+            test('returns a helpful message', async () => {
+              await expect(handlePayload(payload)).resolves.toBe(
+                'payload show_id does not match latest show'
+              )
+              expect(mockRecentPost).not.toHaveBeenCalled()
+            })
+          })
+          describe(`when payload's show_id matches fetched JSON's data[-1].show_id`, () => {
+            let mockedPost
+            beforeEach(() => {
+              payload.body = JSON.stringify({show_id: 123})
+              mockedPost = vi.mocked(Bluesky.prototype.createNewPost).mockResolvedValue({} as any)
+            })
+            afterEach(() => {
+              mockedPost = null
+            })
+            test('posts the song title (happy path)', async () => {
+              await handlePayload(payload)
+              expect(mockedPost).toHaveBeenCalledWith('Newest Song')
+            })
+          })
         })
-      })
-      describe(`when payload's show_id matches fetched JSON's data[-1].show_id`, () => {
-        let mockedPost
-        beforeEach(() => {
-          mockedPost = vi.fn().mockReturnValueOnce({mocked: true})
-          vi.mocked(login).mockResolvedValue({
-            ...mockedLoginReturnValue,
-            post: mockedPost,
-          } as unknown as BskyAgent)
-          mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
-            {show_id: 789, songname: 'A Different Show and Song'},
-            {show_id: 456, songname: 'Yet Another Different Show and Song'},
-            {show_id: 123, songname: 'Most Recent Song Name'},
-          ]})
-        })
-        test('posts the song title', async () => {
-          await handlePayload(payload)
-          expect(mockedPost).toHaveBeenCalledWith({text: 'Most Recent Song Name'})
-        })
-      })
-    })
-    describe('with valid login and prior post _does_ match latest song title', () => {
-      const mockedLoginReturnValue = {
-        getAuthorFeed: vi.fn().mockReturnValueOnce({data: {feed: [{post: {record: {text: 'Song Title'}}}] }}),
-      }
-      beforeEach(() => {
-        vi.mocked(login).mockResolvedValue(mockedLoginReturnValue as unknown as BskyAgent)
-      })
-      afterEach(() => {
-        vi.mocked(login).mockReset()
-      })
-      describe(`when payload's show_id matches fetched JSON's data[-1].show_id`, () => {
-        let mockedPost
-        beforeEach(() => {
-          mockedPost = vi.fn().mockReturnValueOnce({mocked: true})
-          vi.mocked(login).mockResolvedValue({
-            ...mockedLoginReturnValue,
-            post: mockedPost,
-          } as unknown as BskyAgent)
-          mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
-            {show_id: 123, songname: 'Song Title'},
-          ]})
-        })
-        test('does _not_ post the song title', async () => {
-          await handlePayload(payload)
-          expect(mockedPost).not.toHaveBeenCalled()
+        describe('when prior post DOES match latest song title', () => {
+          let mockedPost
+          beforeEach(() => {
+            vi.mocked(Bluesky.prototype.getMostRecentPost).mockResolvedValue({post: {
+              record: {text: 'The Latest Song'}
+            }} as any)
+            mockedPost = vi.mocked(Bluesky.prototype.createNewPost).mockResolvedValue({} as any)
+            mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
+              {show_id: 123, songname: 'The Latest Song'},
+            ]})
+          })
+          afterEach(() => {
+            mockedPost = null
+          })
+          test('does NOT post the song title', async () => {
+            await handlePayload(payload)
+            expect(mockedPost).not.toHaveBeenCalled()
+          })
         })
       })
     })
@@ -182,27 +179,24 @@ describe('handlePayload', () => {
         await use(testFixture.event)
       }
     })
-    const mockedLoginReturnValue = {
-      getAuthorFeed: vi.fn().mockReturnValueOnce({data: {feed: [{post: {record: {text: 'Prior Post'}}}] }}),
-    }
     let mockedPost
     beforeEach(() => {
-      mockedPost = vi.fn().mockReturnValueOnce({mocked: true})
-      vi.mocked(login).mockResolvedValue({
-        ...mockedLoginReturnValue,
-        post: mockedPost,
-      } as unknown as BskyAgent)
+      vi.mocked(Bluesky.prototype.login).mockResolvedValue()
+      vi.mocked(Bluesky.prototype.getMostRecentPost).mockResolvedValue({post: {
+        record: {text: 'Prior Post'}
+      }} as any)
+      mockedPost = vi.mocked(Bluesky.prototype.createNewPost).mockResolvedValue({} as any)
       mockJson(/\bkglw\.net\b.+\blatest\.json$/, {data: [
         // the id 1699404057 is defined in the fixture file
         {show_id: 1699404057, songname: 'Name of Song From Show #1699404057'},
       ]})
     })
     afterEach(() => {
-      vi.mocked(login).mockReset()
+      mockedPost = null
     })
     testWithFixture('does not throw', async ({event}:{event:LambdaEvent<SongfishWebhookPayload>}) => {
       await expect(handlePayload(event)).resolves.not.toThrow()
-      expect(mockedPost).toHaveBeenCalledWith({text: 'Name of Song From Show #1699404057'})
+      expect(mockedPost).toHaveBeenCalledWith('Name of Song From Show #1699404057')
     })
   })
 })

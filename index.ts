@@ -1,8 +1,4 @@
-import * as dotenv from 'dotenv'
-import * as process from 'process'
-import {login} from './bluesky.js'
-
-dotenv.config() // read env var declarations from a `.env` file
+import Bluesky from './bluesky.js'
 
 export type LambdaEvent<T> = {
   body: string // ... which is JSON that parses into a type T
@@ -11,36 +7,34 @@ export type SongfishWebhookPayload = {
   show_id: number
 }
 
-export type BlueskyAgent = {
-  getAuthorFeed: Function
-  post: Function
-}
-
 export function isSongfishPayload(event:any):event is LambdaEvent<SongfishWebhookPayload> {
   return typeof event?.body === 'string' && event.body.includes('"show_id"')
   // TODO could further verify that the song_id appears to be an int...
 }
 
-export async function handlePayload(event:LambdaEvent<SongfishWebhookPayload>):Promise<string> {
+export async function handlePayload(event:LambdaEvent<SongfishWebhookPayload>):Promise<string|Record<string, any>> {
   let payloadBody:SongfishWebhookPayload
   try {
     payloadBody = JSON.parse(event.body)
   } catch (err) {
-    console.log('error parsing event body', err)
+    console.log('error parsing event body:', err)
     throw err
   }
-  let bsky:BlueskyAgent
+  let bsky = new Bluesky({
+    userID: process.env.BLUESKY_USERNAME!,
+    password: process.env.BLUESKY_PASSWORD!,
+  })
   try {
-    bsky = await login()
+    await bsky.login()
   } catch (err) {
-    console.log('login error', err)
+    console.log('login error:', err)
     throw err
   }
   let latestData
   try {
     latestData = (await (await fetch('https://kglw.net/api/v2/latest.json')).json()).data
   } catch (err) {
-    console.log('latest json error', err)
+    console.log('latest json error:', err)
     throw err
   }
   const lastSongInLatestShow = latestData.slice(-1)[0]
@@ -50,10 +44,9 @@ export async function handlePayload(event:LambdaEvent<SongfishWebhookPayload>):P
   }
   let lastPost
   try {
-    const feed = await bsky.getAuthorFeed({actor: process.env.BLUESKY_USERNAME}) // TODO extract this into bluesky file as well
-    lastPost = feed.data.feed[0]
+    lastPost = await bsky.getMostRecentPost()
   } catch (err) {
-    console.log('error fetching most recent post...', err)
+    console.log('error fetching most recent post...:', err)
     throw err
   }
   if (lastPost.post.record.text === lastSongInLatestShow.songname) {
@@ -61,27 +54,25 @@ export async function handlePayload(event:LambdaEvent<SongfishWebhookPayload>):P
     return 'most recent post is already about this song...'
   }
   const text = lastSongInLatestShow.songname
-  const postResponse = await bsky.post({text})
+  const postResponse = await bsky.createNewPost(text)
   console.log('Just posted!', postResponse)
   return postResponse
 }
 
-export const handler = async (event:SongfishWebhookPayload|unknown):Promise<{statusCode:number,body:string}> => {
-  if (!isSongfishPayload(event))
-    return {
-      statusCode: 400,
-      body: `unexpected payload... typeof event: ${typeof event}`,
+export const handler = async (event:unknown):Promise<{statusCode:number,body:string}> => {
+  let statusCode, body
+  if (isSongfishPayload(event)) {
+    try {
+      statusCode = 200
+      body = await handlePayload(event)
+    } catch (err) {
+      console.log('error in handler:', err)
+      statusCode = 500
+      body = JSON.stringify(err)
     }
-  try {
-    return {
-      statusCode: 200,
-      body: await handlePayload(event)
-    }
-  } catch (err) {
-    console.log(err)
-    return {
-      statusCode: 500,
-      body: JSON.stringify(err),
-    }
+  } else {
+    statusCode = 400
+    body = `unexpected payload... typeof event: ${typeof event}`
   }
+  return {statusCode, body}
 }
