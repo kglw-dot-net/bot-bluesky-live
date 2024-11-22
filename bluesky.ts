@@ -1,13 +1,31 @@
-import * as process from 'process'
 import {BskyAgent} from '@atproto/api'
 
-export async function login():Promise<BskyAgent> {
-  const agent = new BskyAgent({
-    service: 'https://bsky.social',
-  })
-  await agent.login({
-    identifier: process.env.BLUESKY_USERNAME!,
-    password: process.env.BLUESKY_PASSWORD!,
-  })
-  return agent
+export default class Bluesky {
+  #agent:BskyAgent
+  #userID:string
+  #password:string
+
+  constructor({userID, password}) {
+    this.#userID = userID
+    this.#password = password
+    this.#agent = new BskyAgent({
+      service: 'https://bsky.social',
+    })
+  }
+
+  async login() {
+    await this.#agent.login({
+      identifier: this.#userID,
+      password: this.#password,
+    })
+  }
+
+  async getMostRecentPost() {
+    const {data: {feed: [mostRecentPost]}} = await this.#agent.getAuthorFeed({actor: this.#userID})
+    return mostRecentPost
+  }
+
+  async createNewPost(text) {
+    return await this.#agent.post({text})
+  }
 }
